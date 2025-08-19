@@ -9,7 +9,7 @@ from app.routers.auth import router as auth_router
 from app.config import settings
 
 # Inicializar la base de datos al arrancar la app
-# db.init_db()
+db.init_db()
 
 # Crear la instancia de FastAPI
 app = FastAPI(

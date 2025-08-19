@@ -1,3 +1,4 @@
+from psycopg2 import OperationalError
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -11,8 +12,18 @@ class Database:
         self.Base = declarative_base()
     
     def init_db(self):
-        from app import models
-        self.Base.metadata.create_all(bind=self.engine)
+        try:
+            # Intentamos conectarnos y crear las tablas
+            connection = self.engine.connect()
+            from app.models import user  # importar modelos aquí
+            self.Base.metadata.create_all(bind=self.engine)
+            self._initialized = True
+            print("✅ Conexión a la DB exitosa y tablas creadas o ya existen")
+            connection.close()
+        except OperationalError as e:
+            print(f"❌ Error conectando a la DB: {e}")
+            raise e
+        
 
 # Crear instancia global
 db = Database()
