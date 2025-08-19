@@ -13,9 +13,8 @@ class Database:
     
     def init_db(self):
         try:
-            # Intentamos conectarnos y crear las tablas
             connection = self.engine.connect()
-            from app.models import user  # importar modelos aquí
+            from app.models import user 
             self.Base.metadata.create_all(bind=self.engine)
             self._initialized = True
             print("✅ Conexión a la DB exitosa y tablas creadas o ya existen")

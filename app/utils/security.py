@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
 from jose import jwt
 from app.config import settings
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
@@ -15,3 +18,6 @@ def verify_access_token(token: str):
         return payload
     except jwt.JWTError:
         return None
+    
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
