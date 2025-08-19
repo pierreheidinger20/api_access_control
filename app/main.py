@@ -40,5 +40,5 @@ async def health_check():
 app.include_router(users_router)
 app.include_router(auth_router)
 
-if __name__ == "__main__":
-    uvicorn.run(app, host=settings.host, port=settings.port)
+# if __name__ == "__main__":
+#     uvicorn.run(app, host=settings.host, port=settings.port)
