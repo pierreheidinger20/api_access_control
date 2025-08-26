@@ -1,16 +1,27 @@
 # app/services/auth.py
 from sqlalchemy.orm import Session
 from app.models.user import User
+from app.models.credentials import Credential
 from app.schemas.auth import UserLogin,TokenResponse
 from app.schemas.users import UserOut
-from app.utils.security import create_access_token,verify_password
+from app.utils.security import create_access_token,verify_password,verify_access_token
 from fastapi import HTTPException
 from app.db import db
 from passlib.context import CryptContext
 from app.utils.security import create_access_token
 from app.config import settings
+from app.utils.webauthn import server
+from fido2.webauthn import PublicKeyCredentialUserEntity
+import pickle
+from fido2.utils import websafe_encode
+from fido2.webauthn import PublicKeyCredentialRpEntity, PublicKeyCredentialUserEntity
+import json
+import base64
+from dataclasses import asdict, is_dataclass
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 def login_user(user: UserLogin,db: Session):
     db_user = db.query(User).filter(User.username == user.username).first()
@@ -32,3 +43,107 @@ def create_token_response(token: str,user_out: UserOut) -> TokenResponse:
         expires_in= settings.access_token_expire_minutes * 60,  # Convert minutes to seconds
         user=user_out
     )
+    
+def serialize(obj):
+    if is_dataclass(obj):
+        return {k: serialize(v) for k, v in asdict(obj).items()}
+    elif isinstance(obj, bytes):
+        return base64.b64encode(obj).decode('utf-8')
+    elif hasattr(obj, 'value'):  # Para enums
+        return obj.value
+    elif isinstance(obj, list):
+        return [serialize(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {k: serialize(v) for k, v in obj.items()}
+    else:
+        return obj
+    
+def register_options(username: str, display_name: str, db: Session):
+    # Crea usuario para el registro WebAuthn
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user_id_bytes = user.id.to_bytes(8, "big")
+    
+    user = PublicKeyCredentialUserEntity(
+        id=user_id_bytes,
+        name=username,
+        display_name=display_name
+    )
+    registration_data, state = server.register_begin(user, user_verification="required")
+    # print(registration_data)
+    state_bytes = pickle.dumps(state)
+    # print(serialize(registration_data))
+    json_data = json.dumps(serialize(registration_data), indent=4)
+    print(json_data)
+    token = create_access_token(
+        {"state": state_bytes.hex(), "username": username}
+    )
+    # print(registration_data)
+    return {"publicKey": json.dumps(serialize(registration_data), indent=4), "challenge_token": token}
+        
+def register_complete(attestation: dict, challenge_token: str, db: Session):
+    payload = verify_access_token(challenge_token)
+    username = payload["username"]
+    state_bytes = bytes.fromhex(payload["state"])
+    state = pickle.loads(state_bytes)
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not state:
+        raise HTTPException(status_code=400, detail="No registration in progress")
+    auth_data = server.register_complete(state, attestation)
+    credential = Credential(
+        user_id=user.id,
+        credential_id=auth_data.credential_id,
+        public_key=auth_data.public_key,
+        sign_count=auth_data.sign_count
+    )
+    db.add(credential)
+    db.commit()
+    db.refresh(credential)
+    return {"status": "ok", "credential_id": credential.id}
+
+def login_options(username: str, db: Session):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    credentials = db.query(Credential).filter(Credential.user_id == user.id).all()
+
+    cred_list = [cred.credential_id for cred in credentials]
+    challenge, state = server.authenticate_begin(cred_list)
+
+    state_bytes = pickle.dumps(state)
+    token = create_access_token({"username": username, "state": state_bytes.hex()})
+
+    return {"publicKey": challenge, "challenge_token": token}
+
+def login_complete(assertion: dict, challenge_token: str, db: Session):
+    payload = verify_access_token(challenge_token)
+    username = payload["username"]
+    state_bytes = bytes.fromhex(payload["state"])
+
+    state = pickle.loads(state_bytes)
+
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    credentials = db.query(Credential).filter(Credential.user_id == user.id).all()
+    cred_list = [
+        {
+            "credential_id": cred.credential_id,
+            "public_key": cred.public_key,
+            "sign_count": cred.sign_count
+        } for cred in credentials
+    ]
+
+    auth_data = server.authenticate_complete(state, cred_list, assertion)
+
+    cred = db.query(Credential).filter(Credential.credential_id == auth_data.credential_id).first()
+    cred.sign_count = auth_data.sign_count
+    db.commit()
+    db.refresh(cred)
+
+    return {"status": "ok", "message": "User authenticated"}

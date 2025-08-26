@@ -8,13 +8,15 @@ load_dotenv()
 class Settings:
     """Configuración de la aplicación"""
     
+    appName: str = os.getenv("APP_NAME", "API Access Control")
+    
     # Configuración general
     debug: bool = os.getenv("DEBUG", "False").lower() == "true"
     host: str = os.getenv("HOST", "0.0.0.0")
     port: int = int(os.getenv("PORT", 8000))
     
     # Base de datos
-    database_url: str = os.getenv("DATABASE_URL", "")
+    database_url: str = os.getenv("DATABASE_URL", "postgresql://postgres:VIFZaNwhAriFZBvRRMGWouLGBtlwLqxT@mainline.proxy.rlwy.net:34771/railway")
 
     # Seguridad
     secret_key: str = os.getenv("JWT_SECRET_KEY", "123456")
