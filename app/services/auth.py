@@ -111,7 +111,7 @@ def register_options(username: str, display_name: str, db: Session):
         {"state": state_bytes.hex(), "username": username}
     )
     # print(registration_data)
-    return {"publicKey": json.dumps(registration_data_camel, indent=4), "challenge_token": token}
+    return {"options": json.dumps(registration_data_camel, indent=4), "challenge_token": token}
         
 def register_complete(attestation: dict, challenge_token: str, db: Session):
     payload = verify_access_token(challenge_token)
