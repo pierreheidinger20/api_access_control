@@ -58,6 +58,35 @@ def serialize(obj):
     else:
         return obj
     
+def to_camel_case(snake_str):
+    if not snake_str:  # Manejar cadenas vacías
+        return snake_str
+    
+    # Dividir por guiones bajos y filtrar partes vacías
+    parts = [part for part in snake_str.split('_') if part]
+    
+    if not parts:  # Si no hay partes válidas, devolver cadena vacía
+        return ''
+    
+    # Mantener la primera parte en minúsculas y capitalizar las siguientes
+    return parts[0].lower() + ''.join(word.capitalize() for word in parts[1:])
+
+def convert_to_camel_case(obj):
+    if isinstance(obj, dict):
+        new_obj = {}
+        for k, v in obj.items():
+            # Asegurarse de que la clave sea una cadena
+            new_key = to_camel_case(str(k))
+            new_obj[new_key] = convert_to_camel_case(v)
+        return new_obj
+    elif isinstance(obj, list):
+        return [convert_to_camel_case(item) for item in obj]
+    elif isinstance(obj, (set, tuple)):
+        return [convert_to_camel_case(item) for item in obj]
+    else:
+        # Devolver valores no modificados (incluye None, strings, números, etc.)
+        return obj
+    
 def register_options(username: str, display_name: str, db: Session):
     # Crea usuario para el registro WebAuthn
     user = db.query(User).filter(User.username == username).first()
@@ -71,16 +100,18 @@ def register_options(username: str, display_name: str, db: Session):
         display_name=display_name
     )
     registration_data, state = server.register_begin(user, user_verification="required")
-    # print(registration_data)
+    
+    registration_data_camel = convert_to_camel_case(serialize(registration_data))
+    # print(registration_data_camel)
     state_bytes = pickle.dumps(state)
     # print(serialize(registration_data))
-    json_data = json.dumps(serialize(registration_data), indent=4)
-    print(json_data)
+    # json_data = json.dumps(serialize(registration_data_camel), indent=4)
+    # print(json_data)
     token = create_access_token(
         {"state": state_bytes.hex(), "username": username}
     )
     # print(registration_data)
-    return {"publicKey": json.dumps(serialize(registration_data), indent=4), "challenge_token": token}
+    return {"publicKey": json.dumps(registration_data_camel, indent=4), "challenge_token": token}
         
 def register_complete(attestation: dict, challenge_token: str, db: Session):
     payload = verify_access_token(challenge_token)
