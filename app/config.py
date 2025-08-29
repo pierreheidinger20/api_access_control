@@ -9,7 +9,8 @@ class Settings:
     """Configuración de la aplicación"""
     
     appName: str = os.getenv("APP_NAME", "API Access Control")
-    
+    web_auth_host: str = os.getenv("WEB_AUTH_HOST", "localhost")
+
     # Configuración general
     debug: bool = os.getenv("DEBUG", "False").lower() == "true"
     host: str = os.getenv("HOST", "0.0.0.0")
