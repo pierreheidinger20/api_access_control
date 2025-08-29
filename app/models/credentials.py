@@ -5,6 +5,7 @@ class Credential(db.Base):
     __tablename__ = "credentials"
 
     id = Column(Integer, primary_key=True, index=True)
+    aaguid = Column(LargeBinary, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     credential_id = Column(LargeBinary, nullable=False, unique=True)
     public_key = Column(LargeBinary, nullable=False)
