@@ -1,10 +1,11 @@
 # app/services/auth.py
 from sqlalchemy.orm import Session
 from app.models import credentials
+from app.models.settings_user import SettingsUser
 from app.models.user import User
 from app.models.credentials import Credential
 from app.schemas.auth import UserLogin,TokenResponse
-from app.schemas.users import UserOut
+from app.schemas.users import SettingsUserOut, UserOut
 from app.utils.security import create_access_token,verify_password,verify_access_token
 from fastapi import HTTPException
 from app.db import db
@@ -38,14 +39,31 @@ def login_user(user: UserLogin,db: Session):
     db_user = db.query(User).filter(User.username == user.username).first()
     if not db_user or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+    db_setting = get_create_setting_users(db, db_user)
+    
+    setting_out = SettingsUserOut(
+        enable_notification=db_setting.enable_notification,
+        enable_biometric_login=db_setting.enable_biometric_login
+    )
     user_out  = UserOut(
         username=db_user.username,
         email=db_user.email,
-        full_name=db_user.full_name
+        full_name=db_user.full_name,
+        settings=setting_out
     )
     token = create_access_token(user_out.model_dump())
     
     return create_token_response(token,user_out)
+
+def verify_token(token: str) -> dict:
+    try:
+        payload = verify_access_token(token)
+        if payload is None:
+            return {"error": "Invalid token"}
+        return { "is_valid": True }
+    except Exception as e:
+        print("Error verifying token:", e)
+        return {"error": str(e)}
 
 def create_token_response(token: str,user_out: UserOut) -> TokenResponse:
     return TokenResponse(
@@ -255,3 +273,16 @@ def login_complete(assertion: dict, challenge_token: str, db: Session):
     token = create_access_token(user_out.model_dump())
     
     return create_token_response(token,user_out)
+
+def get_create_setting_users(db: Session, user: User) -> SettingsUserOut:
+    settings = db.query(SettingsUser).filter(SettingsUser.user_id == user.id).first()
+    if not settings:
+        settings = SettingsUser(
+            user_id=user.id,
+            enable_notification=False,
+            enable_biometric_login=False
+        )
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+    return settings

@@ -35,7 +35,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
     return response
-# Ruta de salud básica
+
 @app.get("/")
 async def root():
     return {"message": "¡Hola! API funcionando correctamente"}

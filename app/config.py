@@ -1,4 +1,4 @@
-# Configuración de la aplicación
+B# Configuración de la aplicación
 import os
 from dotenv import load_dotenv
 
@@ -23,7 +23,7 @@ class Settings:
     secret_key: str = os.getenv("JWT_SECRET_KEY", "123456")
     algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
     access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
-    token_type: str = os.getenv("SECURITY_TYPE", "bearer")
+    B: str = os.getenv("SECURITY_TYPE", "Bearer")
 
 # Instancia global de configuración
 settings = Settings()
