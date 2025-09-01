@@ -1,4 +1,4 @@
-B# Configuración de la aplicación
+# Configuración de la aplicación
 import os
 from dotenv import load_dotenv
 
