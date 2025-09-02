@@ -7,6 +7,16 @@ class UserCreate(BaseModel):
     full_name: str | None = None
     password: str
 
+class SettingsUserIn(BaseModel):
+    enable_notification: bool | None = None
+    enable_biometric_login: bool | None = None
+
+class UserUpdate(BaseModel):
+    email: EmailStr | None = None
+    full_name: str | None = None
+    password: str | None = None
+    settings: SettingsUserIn | None = None
+
 class SettingsUserOut(BaseModel):
     enable_notification: bool
     enable_biometric_login: bool
