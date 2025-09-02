@@ -6,6 +6,7 @@ from app.models.user import User
 from passlib.context import CryptContext
 from app.schemas.users import SettingsUserOut, UserOut, UserUpdate,UserCreate
 from app.utils.security import auth_verify_router
+from app.utils.decorators import auto_response
 
 router = APIRouter(
     prefix="/users",       # todas las rutas de este router comienzan con /users
@@ -45,6 +46,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     return {"id": db_user.id, "username": db_user.username, "email": db_user.email}
 
 @router.put("/{username}",dependencies=[Depends(auth_verify_router)])
+@auto_response()
 def update_user(username: str, user: UserUpdate, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.username == username).first()
     if not existing_user:
