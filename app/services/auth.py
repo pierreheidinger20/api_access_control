@@ -4,8 +4,10 @@ from app.models import credentials
 from app.models.settings_user import SettingsUser
 from app.models.user import User
 from app.models.credentials import Credential
-from app.schemas.auth import UserLogin,TokenResponse
+from app.schemas.auth import UserLogin,TokenResponse, UserLoginByPhoneNumber
 from app.schemas.users import SettingsUserOut, UserOut
+from app.utils.phone import normalize_phone_number, validate_phone
+from app.utils.phone import normalize_phone_number
 from app.utils.security import create_access_token,verify_password,verify_access_token
 from fastapi import HTTPException
 from app.db import db
@@ -268,7 +270,8 @@ def login_complete(assertion: dict, challenge_token: str, db: Session):
     user_out  = UserOut(
         username=user.username,
         email=user.email,
-        full_name=user.full_name
+        full_name=user.full_name,
+        public_id= str(user.public_id) if user.public_id else None
     )
     token = create_access_token(user_out.model_dump())
     
@@ -286,3 +289,31 @@ def get_create_setting_users(db: Session, user: User) -> SettingsUserOut:
         db.commit()
         db.refresh(settings)
     return settings
+
+def login_user_by_phone_number(user: UserLoginByPhoneNumber,db: Session):
+    print(user.phone_number)
+    phone_number = normalize_phone_number(user.phone_number)
+    validation_result = validate_phone(phone_number)
+    print("Validation result:", validation_result)
+    if not validation_result["valid"]:
+        raise HTTPException(status_code=400, detail=validation_result["message"])
+    db_user = db.query(User).filter(User.phone.has(number=validation_result["international"])).first()
+    if not db_user:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+    db_setting = get_create_setting_users(db, db_user)
+    
+    setting_out = SettingsUserOut(
+        enable_notification=db_setting.enable_notification,
+        enable_biometric_login=db_setting.enable_biometric_login
+    )
+    user_out  = UserOut(
+        username=db_user.username,
+        email=db_user.email,
+        full_name=db_user.full_name,
+        phone_number=db_user.phone.number if db_user.phone else None,
+        settings=setting_out,
+        public_id= str(db_user.public_id) if db_user.public_id else None
+    )
+    token = create_access_token(user_out.model_dump())
+    
+    return create_token_response(token,user_out)

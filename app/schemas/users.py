@@ -1,4 +1,5 @@
 # app/schemas/user.py
+
 from pydantic import BaseModel, EmailStr
 
 class UserCreate(BaseModel):
@@ -22,10 +23,19 @@ class SettingsUserOut(BaseModel):
     enable_biometric_login: bool
 
 class UserOut(BaseModel):
-    username: str
-    email: EmailStr
+    username: str | None = None
+    email: EmailStr  | None = None
+    phone_number: str | None = None
     full_name: str | None = None
     settings: SettingsUserOut | None = None
+    public_id: str| None = None
 
 class Config:
     from_attributes = True
+    
+class UserCreateByPhone(BaseModel):
+    username: str | None = None
+    email: EmailStr| None = None
+    full_name: str 
+    password: str | None = None
+    phone_number: str

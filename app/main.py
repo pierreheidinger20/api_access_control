@@ -7,6 +7,7 @@ import uvicorn
 from app.db import db
 from app.routers.users import router as users_router
 from app.routers.auth import router as auth_router
+from app.routers.addresses import router as addresses_router
 # from app import models
 from app.config import settings
 
@@ -46,6 +47,7 @@ async def health_check():
 
 app.include_router(users_router)
 app.include_router(auth_router)
+app.include_router(addresses_router)
 
 # if __name__ == "__main__":
 #     uvicorn.run(app, host=settings.host, port=settings.port)

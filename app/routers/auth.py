@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, Depends
 from fastapi.params import Query
-from app.services.auth import login_user, register_options, register_complete, login_options, login_complete , verify_token
-from app.schemas.auth import UserLogin
+from app.services.auth import login_user, login_user_by_phone_number, register_options, register_complete, login_options, login_complete , verify_token
+from app.schemas.auth import UserLogin, UserLoginByPhoneNumber
 from sqlalchemy.orm import Session
 from app.db import db
 from app.utils.decorators import auto_response
@@ -20,6 +20,11 @@ def get_db():
 @auto_response()
 def login(user: UserLogin, db: Session = Depends(get_db)):
     return login_user(user, db)
+
+@router.post("/login-by-phone-number")
+@auto_response()
+def login_by_phone_number(user: UserLoginByPhoneNumber, db: Session = Depends(get_db)):
+    return login_user_by_phone_number(user, db)
 
 @router.get("/verify_token", dependencies=[Depends(auth_verify_router)])
 def verify():
