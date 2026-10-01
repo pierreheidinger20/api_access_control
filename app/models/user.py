@@ -15,7 +15,7 @@ class User(db.Base):
         UUID(as_uuid=True),
         unique=True,
         nullable=True,
-        default=uuid.uuid7,
+        default=uuid.uuid4,
         index=True,
         server_default=text("gen_random_uuid()"),
     )
