@@ -17,7 +17,7 @@ class Settings:
     port: int = int(os.getenv("PORT", 8000))
     
     # Base de datos
-    database_url: str = os.getenv("DATABASE_URL", "postgresql://postgres:VIFZaNwhAriFZBvRRMGWouLGBtlwLqxT@mainline.proxy.rlwy.net:34771/railway")
+    database_url: str = os.getenv("DATABASE_URL", "")
 
     # Seguridad
     secret_key: str = os.getenv("JWT_SECRET_KEY", "123456")
